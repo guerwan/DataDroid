@@ -1,9 +1,9 @@
 package com.foxykeep.datadroid.activity;
 
-import android.app.Activity;
+import android.app.TabActivity;
 import android.os.Bundle;
 
-public abstract class DataActivity extends Activity
+public abstract class DataTabActivity extends TabActivity
 	implements DataRequestInterface{
 	
 	private DataRequestListener mRequestListener;

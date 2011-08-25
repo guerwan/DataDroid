@@ -20,7 +20,6 @@ import android.os.Handler;
 import android.os.ResultReceiver;
 import android.util.SparseArray;
 
-import com.appoke.store.data.requestmanager.RequestManagerHelper;
 import com.foxykeep.datadroid.service.WorkerService;
 
 /**
