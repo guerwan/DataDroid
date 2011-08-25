@@ -22,18 +22,23 @@ import com.foxykeep.datadroid.requestmanager.RequestManager;
  * @author Foxykeep
  */
 abstract public class WorkerService extends MultiThreadService {
-
-    public static final String LOG_TAG = WorkerService.class.getSimpleName();
-
+	// Max number of parallel threads used
+	private static final int MAX_THREADS = 3;
+    
+	public static final String LOG_TAG = WorkerService.class.getSimpleName();
+    
+    public static final String INTENT_ACTION = "com.foxykeep.datadroid.DataService";
+    
     public static final String INTENT_EXTRA_WORKER_TYPE = "com.foxykeep.datadroid.extras.workerType";
     public static final String INTENT_EXTRA_REQUEST_ID = "com.foxykeep.datadroid.extras.requestId";
+    public static final String INTENT_EXTRA_PACKAGE_NAME = "com.foxykeep.datadroid.extras.packageName";
     public static final String INTENT_EXTRA_RECEIVER = "com.foxykeep.datadroid.extras.receiver";
 
     public static final int SUCCESS_CODE = 0;
     public static final int ERROR_CODE = -1;
 
-    public WorkerService(final int maxThreads) {
-        super(maxThreads);
+    public WorkerService() {
+        super(MAX_THREADS);
     }
 
     /**
@@ -114,4 +119,15 @@ abstract public class WorkerService extends MultiThreadService {
             receiver.send(code, data);
         }
     }
+    
+    @Override
+	protected void onHandleIntent(final Intent intent) {
+    	String packageName = intent.getStringExtra(INTENT_EXTRA_PACKAGE_NAME);
+    	if(!packageName.equals(this.getPackageName()))
+    		return;
+    	
+    	handleIntent(intent);
+    }
+    
+    protected abstract void handleIntent(Intent intent);
 }
