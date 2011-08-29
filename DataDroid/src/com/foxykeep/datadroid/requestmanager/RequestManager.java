@@ -31,6 +31,7 @@ import com.foxykeep.datadroid.service.WorkerService;
 public class RequestManager {
 
 	public static final String RECEIVER_EXTRA_REQUEST_ID = "com.foxykeep.datadroid.extras.requestId";
+	public static final String RECEIVER_EXTRA_REQUEST_IS_POST = "com.foxykeep.datadroid.extras.isPost";
 	public static final String RECEIVER_EXTRA_RESULT_CODE = "com.foxykeep.datadroid.extras.code";
 	public static final String RECEIVER_EXTRA_PAYLOAD = "com.foxykeep.datadroid.extras.payload";
 	public static final String RECEIVER_EXTRA_ERROR_TYPE = "com.foxykeep.datadroid.extras.error";
@@ -55,17 +56,21 @@ public class RequestManager {
 	private SparseArray<WeakReference<OnRequestFinishedListener>> mListenerList;
 	private Handler mHandler = new Handler();
 	private EvalReceiver mEvalReceiver = new EvalReceiver(mHandler);
-
+	private SparseArray<WeakReference<Bundle>> mPostRequestResultMemory;
 	private static Random sRandom = new Random();
 
-	public static enum RequestState {LOADED,
-		NOT_LAUNCHED, RUNNING}
+	public static enum RequestState {
+		NOT_LAUNCHED, 
+		RUNNING,
+		LOADED,
+		RECEIVED}
 
 
 	protected RequestManager(final Context context) {
 		mContext = context.getApplicationContext();
 		mRequestSparseArray = new SparseArray<Intent>();
 		mListenerList = new SparseArray<WeakReference<OnRequestFinishedListener>>();
+		mPostRequestResultMemory = new SparseArray<WeakReference<Bundle>>();
 	}
 
 	/**
@@ -155,10 +160,11 @@ public class RequestManager {
 
 		// Get the request Id
 		final int requestId = resultData.getInt(RECEIVER_EXTRA_REQUEST_ID);
-
+		final boolean isPostRequest = resultData.getBoolean(RECEIVER_EXTRA_REQUEST_IS_POST);
 
 		// Remove the request Id from the "in progress" request list
 		mRequestSparseArray.remove(requestId);
+
 
 		// Call the available listeners
 		synchronized (mListenerList) {
@@ -168,6 +174,12 @@ public class RequestManager {
 				OnRequestFinishedListener listener = weakRef.get();
 				if (weakRef != null) {
 					listener.onRequestFinished(requestId, resultCode, resultData);
+				}
+			}
+			else if(isPostRequest)
+			{
+				synchronized (mPostRequestResultMemory) {
+					mPostRequestResultMemory.put(requestId, new WeakReference<Bundle>(resultData));
 				}
 			}
 		}
@@ -196,16 +208,20 @@ public class RequestManager {
 
 
 	protected int manageRequestId(int workerType, 
-			OnRequestFinishedListener listener, Bundle extras)
+			OnRequestFinishedListener listener, Bundle extras, boolean isPostRequest)
 	{
-		int requestId = getRequestIdIfRunning(workerType, listener);
-		if(requestId != -1)
-			return requestId;
-		else
-		{	
-			requestId = sRandom.nextInt(MAX_RANDOM_REQUEST_ID);
-			addOnRequestFinishedListener(requestId, listener);
+		int requestId;
+		if(!isPostRequest)
+		{
+			requestId = getRequestIdIfRunning(workerType, listener);
+			
+			if(requestId != -1)
+				return requestId;
 		}
+		
+		requestId = sRandom.nextInt(MAX_RANDOM_REQUEST_ID);
+		addOnRequestFinishedListener(requestId, listener);
+		
 
 		final Intent intent = new Intent(WorkerService.INTENT_ACTION);
 		intent.putExtra(WorkerService.INTENT_EXTRA_WORKER_TYPE, workerType);
@@ -218,9 +234,32 @@ public class RequestManager {
 		mRequestSparseArray.append(requestId, intent);
 		return requestId;
 	}
-	
-    public int request(int workerType, OnRequestFinishedListener listener, Bundle bundle) {
-    	return manageRequestId(workerType, listener, bundle);
-    }
 
+	public int request(int workerType, OnRequestFinishedListener listener, 
+			Bundle bundle, boolean isPostRequest) {
+		return manageRequestId(workerType, listener, bundle, isPostRequest);
+	}
+
+	public void getPostResultFromMemory(int requestId, OnRequestFinishedListener listener) {
+		if(isRequestInProgress(requestId))
+		{
+			addOnRequestFinishedListener(requestId, listener);
+		}
+		else
+		{
+			synchronized (mPostRequestResultMemory) {
+				WeakReference<Bundle> result = mPostRequestResultMemory.get(requestId);
+				if(result != null)
+				{
+					Bundle bundle = result.get();
+					if(bundle != null)
+					{
+						listener.onRequestFinished(requestId, 
+								bundle.getInt(RECEIVER_EXTRA_RESULT_CODE), bundle);
+					}
+				}
+				mPostRequestResultMemory.remove(requestId);
+			}
+		}
+	}
 }

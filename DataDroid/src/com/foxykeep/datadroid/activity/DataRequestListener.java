@@ -15,26 +15,21 @@ public class DataRequestListener implements OnRequestFinishedListener {
 	
 	private static final int MAX_NUMBER_OF_REQUESTS= 20;
 	private static final String SAVED_STATE_REQUESTS = "savedStateRequests";
-	private static final String SAVED_STATE_FINISHED_REQUESTS = "savedStateFinishedRequests";
-
-
-	protected RequestManager mRequestManager;
-	// Stores RequestIds and RequestTypes
-	protected ArrayList<Request> mRequests;
-	protected ArrayList<Request> mFinishedRequests;
-	protected DataRequestInterface mDataInterface;
 	
+	protected RequestManager mRequestManager;
+	protected ArrayList<Request> mRequests;
+	protected DataRequestInterface mDataInterface;
+
 
 	public DataRequestListener(Context context, Bundle savedInstanceState, 
 			DataRequestInterface requestInterface) {
 		mRequestManager = RequestManager.from(context);
 		mRequests = new ArrayList<Request>(MAX_NUMBER_OF_REQUESTS);
-		mFinishedRequests = new ArrayList<Request>(MAX_NUMBER_OF_REQUESTS);
 		mDataInterface = requestInterface;
+		
 		if(savedInstanceState != null)
 		{
 			mRequests = savedInstanceState.getParcelableArrayList(SAVED_STATE_REQUESTS);
-			mFinishedRequests = savedInstanceState.getParcelableArrayList(SAVED_STATE_FINISHED_REQUESTS);
 			requestInterface.restoreInstanceState(savedInstanceState);
 		}
 	}
@@ -42,7 +37,6 @@ public class DataRequestListener implements OnRequestFinishedListener {
 	
 	protected void onSaveInstanceState(Bundle outState) {
 		outState.putParcelableArrayList(SAVED_STATE_REQUESTS, mRequests);
-		outState.putParcelableArrayList(SAVED_STATE_FINISHED_REQUESTS, mFinishedRequests);
 	}
 
 	
@@ -54,7 +48,12 @@ public class DataRequestListener implements OnRequestFinishedListener {
 				request = mRequests.get(i);
 				if(request != null)
 				{
-					loadRequest(request.type, request.bundle);
+					if(request.isPostRequest)
+					{
+						mRequestManager.getPostResultFromMemory(request.id, this);
+					}
+					else if (request.state != RequestState.RECEIVED)
+						loadRequest(request.type, request.bundle);
 				}
 			}
 		}
@@ -66,9 +65,8 @@ public class DataRequestListener implements OnRequestFinishedListener {
 			for(int i = 0; i<mRequests.size(); i++)
 			{
 				request = mRequests.get(i);
-				// if request not null and request is not Post
-				// or you need to store the result of the post request
-				if(request != null && !mDataInterface.isPostRequest(request.type))
+				
+				if(request != null)
 					mRequestManager.removeOnRequestFinishedListener(request.id);
 			}
 		}
@@ -88,7 +86,6 @@ public class DataRequestListener implements OnRequestFinishedListener {
 		}
 	}
 
-
 	private Request getRequestByType(int requestType)
 	{
 		synchronized (mRequests) {
@@ -96,41 +93,14 @@ public class DataRequestListener implements OnRequestFinishedListener {
 			for(int i = 0; i < mRequests.size(); i++)
 			{
 				request = mRequests.get(i);
-				if(request != null && request.type == requestType)
+				if(request != null 
+						&& request.type == requestType)
 					return request;
 			}
 			return null;
 		}
 	}
 
-	@SuppressWarnings("unused")
-	private Request getFinishedRequestById(int requestId)
-	{
-		synchronized (mFinishedRequests) {
-			Request request;
-			for(int i = 0; i < mFinishedRequests.size(); i++)
-			{
-				request = mFinishedRequests.get(i);
-				if(request != null && request.id == requestId)
-					return request;
-			}
-			return null;
-		}
-	}
-
-	private Request getFinishedRequestByType(int requestType)
-	{
-		synchronized (mFinishedRequests) {
-			Request request;
-			for(int i = 0; i < mFinishedRequests.size(); i++)
-			{
-				request = mFinishedRequests.get(i);
-				if(request != null && request.type == requestType)
-					return request;
-			}
-			return null;
-		}
-	}
 
 	private boolean removeRequestById(int requestId)
 	{
@@ -161,13 +131,14 @@ public class DataRequestListener implements OnRequestFinishedListener {
 			mDataInterface.onRequestFinishedSuccess(request.type, payload);
 		}
 		
-		removeRequestById(requestId);
-		
-		if(!mDataInterface.isPostRequest(request.type))
-			addFinishedRequest(requestId, request.type, request.bundle);
+		if(request.isPostRequest)
+			removeRequestById(requestId);
+		else
+			request.state = RequestState.RECEIVED;
+	
 	}
 
-	protected void addRequest(int requestId, int requestType, Bundle bundle)
+	protected void addRequest(int requestId, int requestType, Bundle bundle, boolean isPostRequest)
 	{
 		synchronized (mRequests) {
 			Request request = getRequestById(requestId);
@@ -177,25 +148,11 @@ public class DataRequestListener implements OnRequestFinishedListener {
 				mRequests.remove(request);
 			}
 
-			Request newRequest = new Request(requestId, requestType, bundle);
+			Request newRequest = new Request(requestId, requestType, bundle, isPostRequest);
 			mRequests.add(newRequest);	
 		}
 	}
 
-	protected void addFinishedRequest(int requestId, int requestType, Bundle bundle)
-	{
-		synchronized (mFinishedRequests) {
-			Request request = getRequestById(requestId);
-
-			if(request != null)
-			{	
-				mFinishedRequests.remove(request);
-			}
-
-			Request newRequest = new Request(requestId, requestType, bundle);
-			mFinishedRequests.add(newRequest);
-		}
-	}
 
 	protected void removeRequestFromId(int requestId)
 	{
@@ -213,23 +170,42 @@ public class DataRequestListener implements OnRequestFinishedListener {
 	{
 		Request request = getRequestByType(requestType);
 		if(request != null)
-			return RequestState.RUNNING;
+		{
+			// We check if request is still running because we are not sure
+			// we have received the result
+			if(request.state == RequestState.RUNNING && 
+					!mRequestManager.isRequestInProgress(request.id))
+			{
+				request.state = RequestState.LOADED;
+			}
+			return request.state;
+		}
 		else  
 		{
-			return (getFinishedRequestByType(requestType) != null) ? 
-					RequestState.LOADED : RequestState.NOT_LAUNCHED;
+			return RequestState.NOT_LAUNCHED;
 		}
 	}
 
 	protected void loadRequest(int requestType, Bundle bundle)
 	{
+		loadRequest(requestType, bundle, false);
+	}
+	
+	protected void loadRequest(int requestType, Bundle bundle, boolean isPostRequest)
+	{
+		// Multiple Post requests can run at the same time 
+		if(isPostRequest)
+			launchRequest(requestType, bundle, isPostRequest);
+		
+		
 		switch(getRequestState(requestType))
 		{
+		case RECEIVED:
 		case LOADED:
 			launchRequestOnDB(requestType, bundle);
 			break;
 		case NOT_LAUNCHED:
-			launchRequest(requestType, bundle);
+			launchRequest(requestType, bundle, isPostRequest);
 			break;
 		case RUNNING:
 			Request request = getRequestByType(requestType);
@@ -238,24 +214,25 @@ public class DataRequestListener implements OnRequestFinishedListener {
 		}	
 	}
 
-	protected void launchRequest(int requestType, Bundle bundle){
+	protected void launchRequest(int requestType, Bundle bundle, boolean isPostRequest){
 
 		int workerType = mDataInterface.getWorkerType(requestType, false);
 		int requestId = mRequestManager.request(workerType, 
-				this, bundle);
+				this, bundle, isPostRequest);
 
 		if(requestId != -1)
-			addRequest(requestId, requestType, bundle);
+			addRequest(requestId, requestType, bundle, 
+					isPostRequest);
 	}
 
 	protected void launchRequestOnDB(int requestType, Bundle bundle){
 
 		int workerType = mDataInterface.getWorkerType(requestType, true);
 		int requestId = mRequestManager.request(workerType, 
-				this, bundle);
+				this, bundle, false);
 
 		if(requestId != -1)
-			addRequest(requestId, requestType, bundle);
+			addRequest(requestId, requestType, bundle, false);
 	}
 	
 

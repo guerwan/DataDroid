@@ -32,13 +32,13 @@ public abstract class DataTabActivity extends TabActivity
 		mRequestListener.onPause();
 	}
 	
-	protected void loadRequest(int requestType, Bundle bundle)
+	protected void loadRequest(int requestType, Bundle bundle, boolean isPostRequest)
 	{
-		mRequestListener.loadRequest(requestType, bundle);
+		mRequestListener.loadRequest(requestType, bundle, isPostRequest);
 	}
 	
-	protected void launchRequest(int requestType, Bundle bundle){
-		mRequestListener.launchRequest(requestType, bundle);
+	protected void launchRequest(int requestType, Bundle bundle, boolean isPostRequest){
+		mRequestListener.launchRequest(requestType, bundle, isPostRequest);
 	}
 	
 	protected void launchRequestOnDB(int requestType, Bundle bundle){

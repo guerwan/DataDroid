@@ -115,7 +115,9 @@ abstract public class WorkerService extends MultiThreadService {
             }
 
             data.putInt(RequestManager.RECEIVER_EXTRA_REQUEST_ID, intent.getIntExtra(INTENT_EXTRA_REQUEST_ID, -1));
-
+            data.putBoolean(RequestManager.RECEIVER_EXTRA_REQUEST_IS_POST, isPostRequest(intent.getIntExtra(INTENT_EXTRA_WORKER_TYPE, -1)));
+            data.putInt(RequestManager.RECEIVER_EXTRA_RESULT_CODE, code);
+            
             receiver.send(code, data);
         }
     }
@@ -130,4 +132,7 @@ abstract public class WorkerService extends MultiThreadService {
     }
     
     protected abstract void handleIntent(Intent intent);
+    
+    protected abstract boolean isPostRequest(int workerType);
+    	
 }

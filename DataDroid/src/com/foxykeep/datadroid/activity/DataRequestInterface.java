@@ -3,7 +3,6 @@ package com.foxykeep.datadroid.activity;
 import android.os.Bundle;
 
 public interface DataRequestInterface {
-	public abstract boolean isPostRequest(int requestType);
 	public abstract void onRequestFinishedError(int requestType, Bundle payload);
 	public abstract void onRequestFinishedSuccess(int requestType, Bundle payload);
 	public abstract void restoreInstanceState(Bundle savedInstanceState);
