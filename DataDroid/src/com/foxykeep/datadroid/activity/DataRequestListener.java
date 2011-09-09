@@ -205,12 +205,21 @@ public class DataRequestListener implements OnRequestFinishedListener {
 		}
 	}
 
-
-	protected void loadRequest(int workerType, Bundle bundle, boolean isPostRequest)
+	protected void loadRequest(int workerType, Bundle bundle, 
+			boolean isPostRequest)
+	{
+		loadRequest(workerType, bundle, isPostRequest, false);
+	}
+	
+	protected void loadRequest(int workerType, Bundle bundle, 
+			boolean isPostRequest, boolean forceFromDB)
 	{
 		// Multiple Post requests can run at the same time 
 		if(isPostRequest)
-			launchRequest(workerType, bundle, false, isPostRequest);
+		{
+			launchRequest(workerType, bundle, forceFromDB, isPostRequest);
+			return;
+		}
 		
 		
 		switch(getRequestState(workerType))
@@ -220,7 +229,7 @@ public class DataRequestListener implements OnRequestFinishedListener {
 			launchRequest(workerType, bundle, true, isPostRequest);
 			break;
 		case NOT_LAUNCHED:
-			launchRequest(workerType, bundle, false, isPostRequest);
+			launchRequest(workerType, bundle, forceFromDB, isPostRequest);
 			break;
 		case RUNNING:
 			Request request = getRequestByType(workerType);

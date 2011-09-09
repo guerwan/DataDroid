@@ -35,8 +35,13 @@ public abstract class DataActivity extends Activity
 
 	protected void loadRequest(int workerType, Bundle bundle)
 	{
+		loadRequest(workerType, bundle, false);
+	}
+	
+	protected void loadRequest(int workerType, Bundle bundle, boolean forceFromDB)
+	{
 		boolean isPost = isPostRequest(workerType);
-		mRequestListener.loadRequest(workerType, bundle, isPost);
+		mRequestListener.loadRequest(workerType, bundle, isPost, forceFromDB);
 	}
 	
 	protected void invalidateRequest(int workerType)
