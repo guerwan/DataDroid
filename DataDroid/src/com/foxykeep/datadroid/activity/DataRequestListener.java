@@ -53,7 +53,7 @@ public class DataRequestListener implements OnRequestFinishedListener {
 						mRequestManager.getPostResultFromMemory(request.id, this);
 					}
 					else if (request.state != RequestState.RECEIVED)
-						loadRequest(request.type, request.bundle);
+						loadRequest(request.type, request.bundle, request.isPostRequest);
 				}
 			}
 		}
@@ -118,6 +118,25 @@ public class DataRequestListener implements OnRequestFinishedListener {
 			return false;
 		}
 	}
+	
+	
+	//Can be used when an action changes the result of the already executed query
+	public boolean removeRequestByType(int workerType)
+	{
+		synchronized (mRequests) {
+			Request request;
+			for(int i = 0; i < mRequests.size(); i++)
+			{
+				request = mRequests.get(i);
+				if(request != null && request.type == workerType)
+				{
+					mRequests.remove(i);
+					return true;
+				}
+			}
+			return false;
+		}
+	}
 
 	public void onRequestFinished(int requestId, int resultCode, Bundle payload) {
 
@@ -138,7 +157,7 @@ public class DataRequestListener implements OnRequestFinishedListener {
 	
 	}
 
-	protected void addRequest(int requestId, int requestType, Bundle bundle, boolean isPostRequest)
+	protected void addRequest(int requestId, int workerType, Bundle bundle, boolean isPostRequest)
 	{
 		synchronized (mRequests) {
 			Request request = getRequestById(requestId);
@@ -148,7 +167,7 @@ public class DataRequestListener implements OnRequestFinishedListener {
 				mRequests.remove(request);
 			}
 
-			Request newRequest = new Request(requestId, requestType, bundle, isPostRequest);
+			Request newRequest = new Request(requestId, workerType, bundle, isPostRequest);
 			mRequests.add(newRequest);	
 		}
 	}
@@ -186,53 +205,37 @@ public class DataRequestListener implements OnRequestFinishedListener {
 		}
 	}
 
-	protected void loadRequest(int requestType, Bundle bundle)
-	{
-		loadRequest(requestType, bundle, false);
-	}
-	
-	protected void loadRequest(int requestType, Bundle bundle, boolean isPostRequest)
+
+	protected void loadRequest(int workerType, Bundle bundle, boolean isPostRequest)
 	{
 		// Multiple Post requests can run at the same time 
 		if(isPostRequest)
-			launchRequest(requestType, bundle, isPostRequest);
+			launchRequest(workerType, bundle, false, isPostRequest);
 		
 		
-		switch(getRequestState(requestType))
+		switch(getRequestState(workerType))
 		{
 		case RECEIVED:
 		case LOADED:
-			launchRequestOnDB(requestType, bundle);
+			launchRequest(workerType, bundle, true, isPostRequest);
 			break;
 		case NOT_LAUNCHED:
-			launchRequest(requestType, bundle, isPostRequest);
+			launchRequest(workerType, bundle, false, isPostRequest);
 			break;
 		case RUNNING:
-			Request request = getRequestByType(requestType);
+			Request request = getRequestByType(workerType);
 			mRequestManager.addOnRequestFinishedListener(request.id, this);
 			break;
 		}	
 	}
 
-	protected void launchRequest(int requestType, Bundle bundle, boolean isPostRequest){
+	protected void launchRequest(int workerType, Bundle bundle, boolean fromDB, boolean isPostRequest){
 
-		int workerType = mDataInterface.getWorkerType(requestType, false);
 		int requestId = mRequestManager.request(workerType, 
-				this, bundle, isPostRequest);
+				this, bundle, fromDB, isPostRequest);
 
 		if(requestId != -1)
-			addRequest(requestId, requestType, bundle, 
-					isPostRequest);
-	}
-
-	protected void launchRequestOnDB(int requestType, Bundle bundle){
-
-		int workerType = mDataInterface.getWorkerType(requestType, true);
-		int requestId = mRequestManager.request(workerType, 
-				this, bundle, false);
-
-		if(requestId != -1)
-			addRequest(requestId, requestType, bundle, false);
+			addRequest(requestId, workerType, bundle, isPostRequest);
 	}
 	
 

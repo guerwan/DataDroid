@@ -208,9 +208,10 @@ public class RequestManager {
 
 
 	protected int manageRequestId(int workerType, 
-			OnRequestFinishedListener listener, Bundle extras, boolean isPostRequest)
+			OnRequestFinishedListener listener, Bundle extras, boolean isFromDB, boolean isPostRequest)
 	{
 		int requestId;
+		
 		if(!isPostRequest)
 		{
 			requestId = getRequestIdIfRunning(workerType, listener);
@@ -225,6 +226,7 @@ public class RequestManager {
 
 		final Intent intent = new Intent(WorkerService.INTENT_ACTION);
 		intent.putExtra(WorkerService.INTENT_EXTRA_WORKER_TYPE, workerType);
+		intent.putExtra(WorkerService.INTENT_EXTRA_FROM_DB, isFromDB);
 		intent.putExtra(WorkerService.INTENT_EXTRA_RECEIVER, mEvalReceiver);
 		intent.putExtra(WorkerService.INTENT_EXTRA_REQUEST_ID, requestId);
 		intent.putExtra(WorkerService.INTENT_EXTRA_PACKAGE_NAME, mContext.getPackageName());
@@ -236,8 +238,8 @@ public class RequestManager {
 	}
 
 	public int request(int workerType, OnRequestFinishedListener listener, 
-			Bundle bundle, boolean isPostRequest) {
-		return manageRequestId(workerType, listener, bundle, isPostRequest);
+			Bundle bundle, boolean isFromDB, boolean isPostRequest) {
+		return manageRequestId(workerType, listener, bundle, isFromDB, isPostRequest);
 	}
 
 	public void getPostResultFromMemory(int requestId, OnRequestFinishedListener listener) {

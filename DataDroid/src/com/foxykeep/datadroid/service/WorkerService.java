@@ -8,6 +8,7 @@
  */
 package com.foxykeep.datadroid.service;
 
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.ResultReceiver;
@@ -30,13 +31,16 @@ abstract public class WorkerService extends MultiThreadService {
     public static final String INTENT_ACTION = "com.foxykeep.datadroid.DataService";
     
     public static final String INTENT_EXTRA_WORKER_TYPE = "com.foxykeep.datadroid.extras.workerType";
+    public static final String INTENT_EXTRA_FROM_DB = "com.foxykeep.datadroid.extras.fromDB";
+    public static final String INTENT_EXTRA_IS_POST_REQUEST = "com.foxykeep.datadroid.extras.postRequest";
     public static final String INTENT_EXTRA_REQUEST_ID = "com.foxykeep.datadroid.extras.requestId";
     public static final String INTENT_EXTRA_PACKAGE_NAME = "com.foxykeep.datadroid.extras.packageName";
     public static final String INTENT_EXTRA_RECEIVER = "com.foxykeep.datadroid.extras.receiver";
 
     public static final int SUCCESS_CODE = 0;
     public static final int ERROR_CODE = -1;
-
+   
+    
     public WorkerService() {
         super(MAX_THREADS);
     }
@@ -99,7 +103,7 @@ abstract public class WorkerService extends MultiThreadService {
      * @param intent The value passed to {@link onHandleIntent(Intent)}. It must
      *            contain the {@link ResultReceiver} and the requestId
      * @param data A {@link Bundle} the data to send back
-     * @param code The sucess/error code to send back
+     * @param code The success/error code to send back
      */
     protected void sendResult(final Intent intent, Bundle data, final int code) {
 
@@ -115,7 +119,9 @@ abstract public class WorkerService extends MultiThreadService {
             }
 
             data.putInt(RequestManager.RECEIVER_EXTRA_REQUEST_ID, intent.getIntExtra(INTENT_EXTRA_REQUEST_ID, -1));
-            data.putBoolean(RequestManager.RECEIVER_EXTRA_REQUEST_IS_POST, isPostRequest(intent.getIntExtra(INTENT_EXTRA_WORKER_TYPE, -1)));
+            
+            data.putBoolean(RequestManager.RECEIVER_EXTRA_REQUEST_IS_POST, 
+            		intent.getBooleanExtra(INTENT_EXTRA_IS_POST_REQUEST, false));
             data.putInt(RequestManager.RECEIVER_EXTRA_RESULT_CODE, code);
             
             receiver.send(code, data);
@@ -127,12 +133,11 @@ abstract public class WorkerService extends MultiThreadService {
     	String packageName = intent.getStringExtra(INTENT_EXTRA_PACKAGE_NAME);
     	if(!packageName.equals(this.getPackageName()))
     		return;
+    	boolean fromDB = intent.getBooleanExtra(INTENT_EXTRA_FROM_DB, false);
+    	handleIntent(intent, fromDB);
     	
-    	handleIntent(intent);
     }
     
-    protected abstract void handleIntent(Intent intent);
-    
-    protected abstract boolean isPostRequest(int workerType);
-    	
+    protected abstract void handleIntent(Intent intent, boolean fromDB);
+   
 }

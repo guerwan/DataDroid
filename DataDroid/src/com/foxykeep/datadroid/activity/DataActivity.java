@@ -33,16 +33,15 @@ public abstract class DataActivity extends Activity
 	}
 	
 
-	protected void loadRequest(int requestType, Bundle bundle, boolean isPostRequest)
+	protected void loadRequest(int workerType, Bundle bundle)
 	{
-		mRequestListener.loadRequest(requestType, bundle, isPostRequest);
+		boolean isPost = isPostRequest(workerType);
+		mRequestListener.loadRequest(workerType, bundle, isPost);
 	}
 	
-	protected void launchRequest(int requestType, Bundle bundle, boolean isPostRequest){
-		mRequestListener.launchRequest(requestType, bundle, isPostRequest);
+	protected void invalidateRequest(int workerType)
+	{
+		mRequestListener.removeRequestByType(workerType);
 	}
 	
-	protected void launchRequestOnDB(int requestType, Bundle bundle){
-		mRequestListener.launchRequestOnDB(requestType, bundle);
-	}
 }
