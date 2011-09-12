@@ -208,7 +208,10 @@ public class RequestManager {
 
 
 	protected int manageRequestId(int workerType, 
-			OnRequestFinishedListener listener, Bundle extras, boolean isFromDB, boolean isPostRequest)
+			OnRequestFinishedListener listener,
+			Bundle extras, 
+			boolean isFromDB, 
+			boolean isPostRequest)
 	{
 		int requestId;
 		
@@ -227,6 +230,7 @@ public class RequestManager {
 		final Intent intent = new Intent(WorkerService.INTENT_ACTION);
 		intent.putExtra(WorkerService.INTENT_EXTRA_WORKER_TYPE, workerType);
 		intent.putExtra(WorkerService.INTENT_EXTRA_FROM_DB, isFromDB);
+		intent.putExtra(WorkerService.INTENT_EXTRA_IS_POST_REQUEST, isPostRequest);
 		intent.putExtra(WorkerService.INTENT_EXTRA_RECEIVER, mEvalReceiver);
 		intent.putExtra(WorkerService.INTENT_EXTRA_REQUEST_ID, requestId);
 		intent.putExtra(WorkerService.INTENT_EXTRA_PACKAGE_NAME, mContext.getPackageName());

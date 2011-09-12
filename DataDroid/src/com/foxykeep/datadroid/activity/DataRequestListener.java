@@ -30,7 +30,6 @@ public class DataRequestListener implements OnRequestFinishedListener {
 		if(savedInstanceState != null)
 		{
 			mRequests = savedInstanceState.getParcelableArrayList(SAVED_STATE_REQUESTS);
-			requestInterface.restoreInstanceState(savedInstanceState);
 		}
 	}
 
