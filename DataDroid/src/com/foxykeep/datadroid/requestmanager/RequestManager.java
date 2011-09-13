@@ -172,7 +172,7 @@ public class RequestManager {
 			if (weakRef != null)
 			{
 				OnRequestFinishedListener listener = weakRef.get();
-				if (weakRef != null) {
+				if (listener != null) {
 					listener.onRequestFinished(requestId, resultCode, resultData);
 				}
 			}
@@ -234,7 +234,10 @@ public class RequestManager {
 		intent.putExtra(WorkerService.INTENT_EXTRA_RECEIVER, mEvalReceiver);
 		intent.putExtra(WorkerService.INTENT_EXTRA_REQUEST_ID, requestId);
 		intent.putExtra(WorkerService.INTENT_EXTRA_PACKAGE_NAME, mContext.getPackageName());
-		intent.putExtras(extras);
+		
+		if(extras != null)
+			intent.putExtras(extras);
+		
 		mContext.startService(intent);
 
 		mRequestSparseArray.append(requestId, intent);
