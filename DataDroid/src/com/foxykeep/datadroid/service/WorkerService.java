@@ -114,17 +114,25 @@ abstract public class WorkerService extends MultiThreadService {
         ResultReceiver receiver = (ResultReceiver) intent.getParcelableExtra(INTENT_EXTRA_RECEIVER);
 
         if (receiver != null) {
-            if (data == null) {
-                data = new Bundle();
+        	Bundle result = null;
+        	// Also adding the request parameters (can be useful when receiving the result)
+            if(intent != null && intent.getExtras() != null)
+            {
+            	result = intent.getExtras();
+            	result.putAll(data);
+            } 
+            	
+            if (result == null) {
+            	result = new Bundle();
             }
 
-            data.putInt(RequestManager.RECEIVER_EXTRA_REQUEST_ID, intent.getIntExtra(INTENT_EXTRA_REQUEST_ID, -1));
+            result.putInt(RequestManager.RECEIVER_EXTRA_REQUEST_ID, intent.getIntExtra(INTENT_EXTRA_REQUEST_ID, -1));
             
-            data.putBoolean(RequestManager.RECEIVER_EXTRA_REQUEST_IS_POST, 
+            result.putBoolean(RequestManager.RECEIVER_EXTRA_REQUEST_IS_POST, 
             		intent.getBooleanExtra(INTENT_EXTRA_IS_POST_REQUEST, false));
-            data.putInt(RequestManager.RECEIVER_EXTRA_RESULT_CODE, code);
-            
-            receiver.send(code, data);
+            result.putInt(RequestManager.RECEIVER_EXTRA_RESULT_CODE, code);
+
+            receiver.send(code, result);
         }
     }
     

@@ -20,7 +20,6 @@ public class DataRequestListener implements OnRequestFinishedListener {
 	protected ArrayList<Request> mRequests;
 	protected DataRequestInterface mDataInterface;
 
-
 	public DataRequestListener(Context context, Bundle savedInstanceState, 
 			DataRequestInterface requestInterface) {
 		mRequestManager = RequestManager.from(context);
