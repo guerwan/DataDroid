@@ -53,10 +53,10 @@ abstract public class MultiThreadService extends Service {
                     i--;
                 }
             }
-
-            if (futureList.isEmpty()) {
-                stopSelf();
-            }
+// If we kill the Service we need to clean also the threads 
+//            if (futureList.isEmpty()) {
+//                stopSelf();
+//            }
         }
     };
 

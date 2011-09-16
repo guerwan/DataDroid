@@ -12,14 +12,16 @@ public class Request implements Parcelable{
 	public Bundle bundle;
 	public RequestState state;
 	public boolean isPostRequest;
+	public boolean saveInMemory;
 
 	
-	public Request(int id, int type, Bundle bundle, boolean isPostRequest) {
+	public Request(int id, int type, Bundle bundle, boolean isPostRequest, boolean saveInMemory) {
         this.id = id;
         this.type = type;
         this.bundle = bundle;
         this.state = RequestState.RUNNING;
         this.isPostRequest = isPostRequest;
+        this.saveInMemory = saveInMemory;
     }
 	
 	private Request(final Parcel in) {
@@ -28,6 +30,7 @@ public class Request implements Parcelable{
     	bundle = in.readBundle();
     	state = RequestState.values()[in.readInt()];
     	isPostRequest = in.readByte() == 1;
+    	saveInMemory = in.readByte() == 1;
     }
 
     public int describeContents() {
@@ -41,6 +44,7 @@ public class Request implements Parcelable{
         dest.writeBundle(bundle);
         dest.writeInt(state.ordinal());
         dest.writeByte((byte)(isPostRequest?1:0));
+        dest.writeByte((byte)(saveInMemory?1:0));
     }
 
     public static final Parcelable.Creator<Request> CREATOR = new Parcelable.Creator<Request>() {

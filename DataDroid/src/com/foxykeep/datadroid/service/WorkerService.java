@@ -24,7 +24,7 @@ import com.foxykeep.datadroid.requestmanager.RequestManager;
  */
 abstract public class WorkerService extends MultiThreadService {
 	// Max number of parallel threads used
-	private static final int MAX_THREADS = 3;
+	private static final int MAX_THREADS = 5;
     
 	public static final String LOG_TAG = WorkerService.class.getSimpleName();
     
@@ -33,6 +33,7 @@ abstract public class WorkerService extends MultiThreadService {
     public static final String INTENT_EXTRA_WORKER_TYPE = "com.foxykeep.datadroid.extras.workerType";
     public static final String INTENT_EXTRA_FROM_DB = "com.foxykeep.datadroid.extras.fromDB";
     public static final String INTENT_EXTRA_IS_POST_REQUEST = "com.foxykeep.datadroid.extras.postRequest";
+    public static final String INTENT_EXTRA_SAVE_IN_MEMORY = "com.foxykeep.datadroid.extras.saveInMemory";
     public static final String INTENT_EXTRA_REQUEST_ID = "com.foxykeep.datadroid.extras.requestId";
     public static final String INTENT_EXTRA_PACKAGE_NAME = "com.foxykeep.datadroid.extras.packageName";
     public static final String INTENT_EXTRA_RECEIVER = "com.foxykeep.datadroid.extras.receiver";
@@ -128,8 +129,10 @@ abstract public class WorkerService extends MultiThreadService {
 
             result.putInt(RequestManager.RECEIVER_EXTRA_REQUEST_ID, intent.getIntExtra(INTENT_EXTRA_REQUEST_ID, -1));
             
-            result.putBoolean(RequestManager.RECEIVER_EXTRA_REQUEST_IS_POST, 
-            		intent.getBooleanExtra(INTENT_EXTRA_IS_POST_REQUEST, false));
+            result.putBoolean(RequestManager.RECEIVER_EXTRA_REQUEST_SAVE_IN_MEMORY, 
+            		intent.getBooleanExtra(INTENT_EXTRA_IS_POST_REQUEST, false) || 
+            			intent.getBooleanExtra(INTENT_EXTRA_SAVE_IN_MEMORY, false));
+            
             result.putInt(RequestManager.RECEIVER_EXTRA_RESULT_CODE, code);
 
             receiver.send(code, result);
