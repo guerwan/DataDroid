@@ -38,8 +38,7 @@ public abstract class DataTabActivity extends TabActivity
 	
 	protected void loadRequest(int workerType, Bundle bundle, boolean forceFromDB)
 	{
-		boolean isPost = isPostRequest(workerType);
-		mRequestListener.loadRequest(workerType, bundle, isPost, forceFromDB, saveInMemoryRequest(workerType));
+		mRequestListener.loadRequest(workerType, bundle, forceFromDB, saveInSoftMemoryRequest(workerType));
 	}
 	
 	protected void invalidateRequest(int workerType)

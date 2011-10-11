@@ -1,33 +1,33 @@
 package com.foxykeep.datadroid.activity;
 
-import android.app.Activity;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
 
-public abstract class DataActivity extends Activity
+public abstract class DataFragment extends Fragment
 	implements DataRequestInterface{
 	
 	private DataRequestListener mRequestListener;
 
 	@Override
-	protected void onCreate(Bundle savedInstanceState) {
+	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mRequestListener = new DataRequestListener(this, savedInstanceState, this);
+		mRequestListener = new DataRequestListener(getActivity(), savedInstanceState, this);
 	}
 
 	@Override
-	protected void onSaveInstanceState(Bundle outState) {
+	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
 		mRequestListener.onSaveInstanceState(outState);
 	}
 
 	@Override
-	protected void onResume() {
+	public void onResume() {
 		super.onResume();
 		mRequestListener.onResume();
 	}
 
 	@Override
-	protected void onPause() {
+	public void onPause() {
 		super.onPause();
 		mRequestListener.onPause();
 	}

@@ -38,6 +38,7 @@ public class RequestManager {
 	public static final String RECEIVER_EXTRA_ERROR_TYPE = "com.foxykeep.datadroid.extras.error";
 	public static final int RECEIVER_EXTRA_VALUE_ERROR_TYPE_CONNEXION = 1;
 	public static final int RECEIVER_EXTRA_VALUE_ERROR_TYPE_DATA = 2;
+	public static final int RECEIVER_EXTRA_VALUE_ERROR_TYPE_MEMORY_EMPTY = 3;
 
 
 	private static final int MAX_RANDOM_REQUEST_ID = 1000000;
@@ -187,20 +188,41 @@ public class RequestManager {
 	}
 
 
-	protected int getRequestIdIfRunning(int workerType, OnRequestFinishedListener listener)
+	protected int getRequestIdIfRunning(int workerType, 
+			OnRequestFinishedListener listener, Bundle extras)
 	{
 		final int requestSparseArrayLength = mRequestSparseArray.size();
 		int requestId = -1;
+		Intent savedIntent;
+		Bundle savedExtras;
+		boolean extrasMatch;
 		for (int i = 0; i < requestSparseArrayLength; i++) {
-			final Intent savedIntent = mRequestSparseArray.valueAt(i);
-
+			savedIntent = mRequestSparseArray.valueAt(i);
+			savedExtras = savedIntent.getExtras();
+			
 			if (savedIntent.getIntExtra(WorkerService.INTENT_EXTRA_WORKER_TYPE, -1) 
 					!= workerType) {
 				continue;
 			}
-
-			requestId = mRequestSparseArray.keyAt(i);
-			addOnRequestFinishedListener(requestId, listener);
+			
+			extrasMatch = true;
+			
+			if(extras != null)
+			{
+				for(String key : extras.keySet())
+				{
+					if(!savedExtras.get(key).equals(extras.get(key)))
+					{
+						extrasMatch = false;
+					}
+				}
+			}
+			
+			if(extrasMatch)
+			{
+				requestId = mRequestSparseArray.keyAt(i);
+				addOnRequestFinishedListener(requestId, listener);
+			}
 			break;
 		}
 
@@ -212,19 +234,15 @@ public class RequestManager {
 			OnRequestFinishedListener listener,
 			Bundle extras, 
 			boolean isFromDB, 
-			boolean isPostRequest,
 			boolean saveInMemory)
 	{
 		int requestId;
 		
-		if(!isPostRequest)
-		{
-			requestId = getRequestIdIfRunning(workerType, listener);
-			
-			if(requestId != -1)
-				return requestId;
-		}
+		requestId = getRequestIdIfRunning(workerType, listener, extras);
 		
+		if(requestId != -1)
+			return requestId;
+	
 		requestId = sRandom.nextInt(MAX_RANDOM_REQUEST_ID);
 		addOnRequestFinishedListener(requestId, listener);
 		
@@ -232,7 +250,6 @@ public class RequestManager {
 		final Intent intent = new Intent(WorkerService.INTENT_ACTION);
 		intent.putExtra(WorkerService.INTENT_EXTRA_WORKER_TYPE, workerType);
 		intent.putExtra(WorkerService.INTENT_EXTRA_FROM_DB, isFromDB);
-		intent.putExtra(WorkerService.INTENT_EXTRA_IS_POST_REQUEST, isPostRequest);
 		intent.putExtra(WorkerService.INTENT_EXTRA_SAVE_IN_MEMORY, saveInMemory);
 		intent.putExtra(WorkerService.INTENT_EXTRA_RECEIVER, mEvalReceiver);
 		intent.putExtra(WorkerService.INTENT_EXTRA_REQUEST_ID, requestId);
@@ -248,11 +265,11 @@ public class RequestManager {
 	}
 
 	public int request(int workerType, OnRequestFinishedListener listener, 
-			Bundle bundle, boolean isFromDB, boolean isPostRequest, boolean saveInMemory) {
-		return manageRequestId(workerType, listener, bundle, isFromDB, isPostRequest, saveInMemory);
+			Bundle bundle, boolean isFromDB, boolean saveInMemory) {
+		return manageRequestId(workerType, listener, bundle, isFromDB, saveInMemory);
 	}
 
-	public void getPostResultFromMemory(int requestId, OnRequestFinishedListener listener) {
+	public void getResultFromSoftMemory(int requestId, OnRequestFinishedListener listener) {
 		if(isRequestInProgress(requestId))
 		{
 			addOnRequestFinishedListener(requestId, listener);
@@ -268,6 +285,15 @@ public class RequestManager {
 					{
 						listener.onRequestFinished(requestId, 
 								bundle.getInt(RECEIVER_EXTRA_RESULT_CODE), bundle);
+					}
+					else
+					{
+						bundle = new Bundle();
+						bundle.putInt(RequestManager.RECEIVER_EXTRA_ERROR_TYPE, 
+								RequestManager.RECEIVER_EXTRA_VALUE_ERROR_TYPE_MEMORY_EMPTY);
+       
+						listener.onRequestFinished(requestId, 
+								WorkerService.ERROR_CODE, bundle);
 					}
 				}
 				mRequestResultMemory.remove(requestId);

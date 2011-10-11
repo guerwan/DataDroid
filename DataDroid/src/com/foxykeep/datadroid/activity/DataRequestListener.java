@@ -46,12 +46,11 @@ public class DataRequestListener implements OnRequestFinishedListener {
 				request = mRequests.get(i);
 				if(request != null)
 				{
-					if(request.saveInMemory)
+					if(request.state != RequestState.RECEIVED)
 					{
-						mRequestManager.getPostResultFromMemory(request.id, this);
+						loadRequest(request.type, request.bundle, 
+								request.saveInSoftMemory);
 					}
-					else if (request.state != RequestState.RECEIVED)
-						loadRequest(request.type, request.bundle, request.isPostRequest, request.saveInMemory);
 				}
 			}
 		}
@@ -84,7 +83,7 @@ public class DataRequestListener implements OnRequestFinishedListener {
 		}
 	}
 
-	private Request getRequestByType(int requestType)
+	private Request getRequestByType(int requestType, Bundle extras)
 	{
 		synchronized (mRequests) {
 			Request request;
@@ -93,7 +92,22 @@ public class DataRequestListener implements OnRequestFinishedListener {
 				request = mRequests.get(i);
 				if(request != null 
 						&& request.type == requestType)
-					return request;
+				{
+					boolean extrasMatch = true;
+					if(extras != null)
+					{
+						for(String key : extras.keySet())
+						{
+							if(!extras.get(key).equals(request.bundle.get(key)))
+							{
+								extrasMatch = false;
+							}
+						}
+					}
+					
+					if (extrasMatch)
+						return request;
+				}
 			}
 			return null;
 		}
@@ -150,15 +164,14 @@ public class DataRequestListener implements OnRequestFinishedListener {
 			mDataInterface.onRequestFinishedSuccess(request.type, payload);
 		}
 		
-		if(request.isPostRequest)
-			removeRequestById(requestId);
+		if(request.saveInSoftMemory)
+			removeRequestById(requestId); // We remove the request if it was saved in soft memory because it can't be fetched from the database anyway
 		else
 			request.state = RequestState.RECEIVED;
-	
 	}
 
 	protected void addRequest(int requestId, int workerType, Bundle bundle, 
-			boolean isPostRequest, boolean saveInMemory)
+			boolean saveInMemory)
 	{
 		synchronized (mRequests) {
 			Request request = getRequestById(requestId);
@@ -169,7 +182,7 @@ public class DataRequestListener implements OnRequestFinishedListener {
 			}
 
 			Request newRequest = 
-					new Request(requestId, workerType, bundle, isPostRequest, saveInMemory);
+					new Request(requestId, workerType, bundle, saveInMemory);
 			mRequests.add(newRequest);	
 		}
 	}
@@ -187,9 +200,14 @@ public class DataRequestListener implements OnRequestFinishedListener {
 		}
 	}
 
-	protected RequestState getRequestState(int requestType)
+	protected RequestState getRequestState(int requestType, Bundle extras)
 	{
-		Request request = getRequestByType(requestType);
+		Request request = getRequestByType(requestType, extras);
+		return getRequestState(request, extras);
+	}
+	
+	protected RequestState getRequestState(Request request, Bundle extras)
+	{
 		if(request != null)
 		{
 			// We check if request is still running because we are not sure
@@ -208,33 +226,30 @@ public class DataRequestListener implements OnRequestFinishedListener {
 	}
 
 	protected void loadRequest(int workerType, Bundle bundle, 
-			boolean isPostRequest, boolean saveInMemory)
+			boolean saveInMemory)
 	{
-		loadRequest(workerType, bundle, isPostRequest, false, saveInMemory);
+		loadRequest(workerType, bundle, false, saveInMemory);
 	}
 	
 	protected void loadRequest(int workerType, Bundle bundle, 
-			boolean isPostRequest, boolean forceFromDB, boolean saveInMemory)
+			boolean forceFromDB, boolean saveInMemory)
 	{
-		// Multiple Post requests can run at the same time 
-		if(isPostRequest)
-		{
-			launchRequest(workerType, bundle, forceFromDB, isPostRequest, saveInMemory);
-			return;
-		}
-		
-		
-		switch(getRequestState(workerType))
+		Request request = getRequestByType(workerType, bundle);
+		switch(getRequestState(request, bundle))
 		{
 		case RECEIVED:
 		case LOADED:
-			launchRequest(workerType, bundle, true, isPostRequest, saveInMemory);
+			if(saveInMemory)
+			{
+				mRequestManager.getResultFromSoftMemory(request.id, this);
+			}
+			else
+				launchRequest(workerType, bundle, true, saveInMemory);
 			break;
 		case NOT_LAUNCHED:
-			launchRequest(workerType, bundle, forceFromDB, isPostRequest, saveInMemory);
+			launchRequest(workerType, bundle, forceFromDB, saveInMemory);
 			break;
 		case RUNNING:
-			Request request = getRequestByType(workerType);
 			mRequestManager.addOnRequestFinishedListener(request.id, this);
 			break;
 		}	
@@ -243,14 +258,13 @@ public class DataRequestListener implements OnRequestFinishedListener {
 	protected void launchRequest(int workerType, 
 			Bundle bundle, 
 			boolean fromDB, 
-			boolean isPostRequest,
 			boolean saveInMemory){
 
 		int requestId = mRequestManager.request(workerType, 
-				this, bundle, fromDB, isPostRequest, saveInMemory);
+				this, bundle, fromDB, saveInMemory);
 
 		if(requestId != -1)
-			addRequest(requestId, workerType, bundle, isPostRequest, saveInMemory);
+			addRequest(requestId, workerType, bundle, saveInMemory);
 	}
 	
 

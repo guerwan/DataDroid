@@ -1,9 +1,9 @@
 package com.foxykeep.datadroid.activity;
 
-import android.app.Activity;
 import android.os.Bundle;
+import android.preference.PreferenceActivity;
 
-public abstract class DataActivity extends Activity
+public abstract class DataPreferenceActivity extends PreferenceActivity
 	implements DataRequestInterface{
 	
 	private DataRequestListener mRequestListener;
@@ -42,6 +42,7 @@ public abstract class DataActivity extends Activity
 	{
 		mRequestListener.loadRequest(workerType, bundle, forceFromDB, saveInSoftMemoryRequest(workerType));
 	}
+	
 	
 	protected void invalidateRequest(int workerType)
 	{
