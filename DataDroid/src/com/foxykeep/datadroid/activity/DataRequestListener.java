@@ -133,7 +133,7 @@ public class DataRequestListener implements OnRequestFinishedListener {
 	
 	
 	//Can be used when an action changes the result of the already executed query
-	public boolean removeRequestByType(int workerType, boolean removeListener)
+	public void removeRequestByType(int workerType, boolean removeListener)
 	{
 		synchronized (mRequests) {
 			Request request;
@@ -145,10 +145,8 @@ public class DataRequestListener implements OnRequestFinishedListener {
 					if(removeListener)
 						mRequestManager.removeOnRequestFinishedListener(request.id);
 					mRequests.remove(i);
-					return true;
 				}
 			}
-			return false;
 		}
 	}
 
@@ -158,16 +156,16 @@ public class DataRequestListener implements OnRequestFinishedListener {
 
 		Request request = getRequestById(requestId);
 
+		if(request.saveInSoftMemory)
+			removeRequestById(requestId); // We remove the request if it was saved in soft memory because it can't be fetched from the database anyway
+		else
+			request.state = RequestState.RECEIVED;
+		
 		if (resultCode == WorkerService.ERROR_CODE) {
 			mDataInterface.onRequestFinishedError(request.type, payload);
 		} else {
 			mDataInterface.onRequestFinishedSuccess(request.type, payload);
 		}
-		
-		if(request.saveInSoftMemory)
-			removeRequestById(requestId); // We remove the request if it was saved in soft memory because it can't be fetched from the database anyway
-		else
-			request.state = RequestState.RECEIVED;
 	}
 
 	protected void addRequest(int requestId, int workerType, Bundle bundle, 
@@ -184,19 +182,6 @@ public class DataRequestListener implements OnRequestFinishedListener {
 			Request newRequest = 
 					new Request(requestId, workerType, bundle, saveInMemory);
 			mRequests.add(newRequest);	
-		}
-	}
-
-
-	protected void removeRequestFromId(int requestId)
-	{
-		synchronized (mRequests) {
-			Request request = getRequestById(requestId);
-
-			if(request != null)
-			{	
-				mRequests.remove(request);
-			}
 		}
 	}
 
